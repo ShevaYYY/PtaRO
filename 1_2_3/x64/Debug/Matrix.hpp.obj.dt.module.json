@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "1_2_3\\x64\\Debug\\Matrix.obj",
+            "outputs": [
+                "1_2_3\\x64\\Debug\\Matrix.hpp.obj.dt.module.json",
+                "1_2_3\\x64\\Debug\\Matrix.hpp.obj.dt.d.json"
+            ],
+            "requires": []
+        }
+    ]
+}

@@ -1,0 +1,54 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "F:\\LNU\\3\\PTARO\\123\\1_2_3\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{5F550D0E-DC32-470A-8BE3-AEB39D5C598A}|1_2_3.vcxproj|F:\\LNU\\3\\PTARO\\123\\1_2_3\\Matrix.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{5F550D0E-DC32-470A-8BE3-AEB39D5C598A}|1_2_3.vcxproj|solutionrelative:Matrix.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5F550D0E-DC32-470A-8BE3-AEB39D5C598A}|1_2_3.vcxproj|F:\\LNU\\3\\PTARO\\123\\1_2_3\\1_2_3.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{5F550D0E-DC32-470A-8BE3-AEB39D5C598A}|1_2_3.vcxproj|solutionrelative:1_2_3.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Matrix.hpp",
+              "DocumentMoniker": "F:\\LNU\\3\\PTARO\\123\\1_2_3\\Matrix.hpp",
+              "RelativeDocumentMoniker": "Matrix.hpp",
+              "ToolTip": "F:\\LNU\\3\\PTARO\\123\\1_2_3\\Matrix.hpp",
+              "RelativeToolTip": "Matrix.hpp",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAAADwAAAApAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2026-09-16T08:35:49.824Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "1_2_3.cpp",
+              "DocumentMoniker": "F:\\LNU\\3\\PTARO\\123\\1_2_3\\1_2_3.cpp",
+              "RelativeDocumentMoniker": "1_2_3.cpp",
+              "ToolTip": "F:\\LNU\\3\\PTARO\\123\\1_2_3\\1_2_3.cpp",
+              "RelativeToolTip": "1_2_3.cpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2026-09-16T08:34:08.371Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
