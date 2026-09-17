@@ -9,6 +9,7 @@
 
 using namespace std;
 
+
 class Matrix {
 private:
     size_t rows_;
@@ -50,8 +51,7 @@ public:
         return data_[r * cols_ + c];
     }
 
-
-    void randomize(double minVal = -10.0, double maxVal = 100.0) {
+    void randomize(double minVal = 0.0, double maxVal = 100.0) {
         random_device rd;
         mt19937 gen(rd());
         uniform_real_distribution<double> dis(minVal, maxVal);
@@ -83,4 +83,3 @@ public:
         cout << endl;
     }
 };
-

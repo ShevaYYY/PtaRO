@@ -1,5 +1,4 @@
-#ifndef CHAIN_MATRIX_ADD_OPERATION_HPP
-#define CHAIN_MATRIX_ADD_OPERATION_HPP
+#pragma once
 
 #include "IMatrixOperation.hpp"
 #include <vector>
@@ -7,15 +6,15 @@
 #include <stdexcept>
 #include <iostream>
 
-/**
- * @brief Summation of matrix chain A + B + C + D + ... using parallel binary tree task parallelism (std::async).
- */
+using namespace std;
+
+
 class ChainMatrixAddOperation {
 private:
-    Matrix addRangeParallel(size_t start, size_t end, const std::vector<Matrix>& matrices, const IMatrixOperation& op) const {
+    Matrix addRangeParallel(size_t start, size_t end, const vector<Matrix>& matrices, const IMatrixOperation& op) const {
         size_t count = end - start;
         if (count == 0) {
-            throw std::invalid_argument("Empty chain range provided!");
+            throw invalid_argument("Empty chain range provided!");
         }
         if (count == 1) {
             return matrices[start];
@@ -26,12 +25,10 @@ private:
 
         size_t mid = start + count / 2;
 
-        // Launch left sub-tree asynchronously using task parallelism
-        auto leftFuture = std::async(std::launch::async, [this, start, mid, &matrices, &op]() {
+        auto leftFuture = async(launch::async, [this, start, mid, &matrices, &op]() {
             return addRangeParallel(start, mid, matrices, op);
         });
 
-        // Compute right sub-tree in the current task context
         Matrix rightResult = addRangeParallel(mid, end, matrices, op);
         Matrix leftResult = leftFuture.get();
 
@@ -39,22 +36,17 @@ private:
     }
 
 public:
-    /**
-     * @brief Computes sum of matrix chain via parallel binary tree (std::async).
-     */
-    Matrix executeParallel(const std::vector<Matrix>& matrices, const IMatrixOperation& op) const {
+
+    Matrix executeParallel(const vector<Matrix>& matrices, const IMatrixOperation& op) const {
         if (matrices.empty()) {
-            throw std::invalid_argument("Matrix chain cannot be empty!");
+            throw invalid_argument("Matrix chain cannot be empty!");
         }
         return addRangeParallel(0, matrices.size(), matrices, op);
     }
 
-    /**
-     * @brief Computes sum of matrix chain sequentially (linear fold baseline).
-     */
-    Matrix executeSequential(const std::vector<Matrix>& matrices, const IMatrixOperation& op) const {
+    Matrix executeSequential(const vector<Matrix>& matrices, const IMatrixOperation& op) const {
         if (matrices.empty()) {
-            throw std::invalid_argument("Matrix chain cannot be empty!");
+            throw invalid_argument("Matrix chain cannot be empty!");
         }
 
         Matrix result = matrices[0];
@@ -64,5 +56,3 @@ public:
         return result;
     }
 };
-
-#endif // CHAIN_MATRIX_ADD_OPERATION_HPP

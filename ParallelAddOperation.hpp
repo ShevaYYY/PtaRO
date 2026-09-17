@@ -7,6 +7,9 @@
 #include <stdexcept>
 #include <string>
 
+using namespace std;
+
+
 class ParallelAddOperation : public IMatrixOperation {
 private:
     size_t requestedThreads_;

@@ -12,5 +12,6 @@ public:
 
     virtual Matrix execute(const Matrix& A, const Matrix& B) const = 0;
 
+
     virtual string getName() const = 0;
 };

@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <algorithm>
 
+using namespace std;
 
 class SequentialAddOperation : public IMatrixOperation {
 public:

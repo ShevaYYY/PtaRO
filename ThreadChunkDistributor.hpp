@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstddef>
 
+using namespace std;
 
 struct ChunkRange {
     size_t start;
@@ -13,7 +14,7 @@ struct ChunkRange {
 
 class ThreadChunkDistributor {
 public:
-
+    
     static vector<ChunkRange> distribute(size_t totalElements, size_t requestedThreads) {
         if (totalElements == 0 || requestedThreads == 0) {
             return {};

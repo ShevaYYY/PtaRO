@@ -10,6 +10,8 @@
 #include "ChainMatrixAddOperation.hpp"
 #include "MatrixBenchmarkSuite.hpp"
 
+using namespace std;
+
 void testMatrixBasic() {
     cout << "[Test 1] Matrix basic allocation & indexing... ";
     Matrix m(3, 4, 2.5);
@@ -27,13 +29,11 @@ void testMatrixBasic() {
 void testChunkDistributor() {
     cout << "[Test 2] ThreadChunkDistributor 1D partitioning... ";
     auto chunks = ThreadChunkDistributor::distribute(10, 3);
-    // 10 elements, 3 threads -> chunks of size 4, 3, 3
     assert(chunks.size() == 3);
     assert(chunks[0].start == 0 && chunks[0].end == 4);
     assert(chunks[1].start == 4 && chunks[1].end == 7);
     assert(chunks[2].start == 7 && chunks[2].end == 10);
 
-    // Edge case: actualThreads = min(totalElements, requestedThreads)
     auto chunksEdge = ThreadChunkDistributor::distribute(2, 8);
     assert(chunksEdge.size() == 2);
     assert(chunksEdge[0].start == 0 && chunksEdge[0].end == 1);

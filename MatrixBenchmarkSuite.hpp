@@ -14,6 +14,9 @@
 #include <cmath>
 #include <string>
 
+using namespace std;
+using namespace std::chrono;
+
 struct BenchmarkResult {
     size_t requestedThreads;
     size_t actualThreads;
@@ -27,47 +30,47 @@ class MatrixBenchmarkSuite {
 public:
 
     static vector<size_t> generateAdaptiveThreadCounts(size_t maxThreads = 240) {
-        vector<size_t> threadCounts;
-        size_t hw = thread::hardware_concurrency();
-        size_t fastZone = hw > 0 ? hw * 2 : 16;
 
-        size_t limit1 = min(fastZone, maxThreads);
-        for (size_t t = 1; t <= limit1; ++t) {
-            threadCounts.push_back(t);
-        }
+        return {1, 2, 4, 6, 8, 12, 16, 24, 32, 64, 100};
+        // vector<size_t> threadCounts;
+        // size_t hw = thread::hardware_concurrency();
+        // size_t fastZone = hw > 0 ? hw * 2 : 16;
 
-        size_t t = limit1;
-        while (t < maxThreads) {
-            size_t step = 4;
-            if (t >= fastZone * 4) {
-                step = 20;
-            } else if (t >= fastZone * 2) {
-                step = 8;
-            }
+        // size_t limit1 = min(fastZone, maxThreads);
+        // for (size_t t = 1; t <= limit1; ++t) {
+        //     threadCounts.push_back(t);
+        // }
 
-            t += step;
-            if (t > maxThreads) {
-                t = maxThreads;
-            }
-            if (threadCounts.back() != t) {
-                threadCounts.push_back(t);
-            }
-        }
+        // size_t t = limit1;
+        // while (t < maxThreads) {
+        //     size_t step = 4;
+        //     if (t >= fastZone * 4) {
+        //         step = 20;
+        //     } else if (t >= fastZone * 2) {
+        //         step = 8;
+        //     }
+
+        //     t += step;
+        //     if (t > maxThreads) {
+        //         t = maxThreads;
+        //     }
+        //     if (threadCounts.back() != t) {
+        //         threadCounts.push_back(t);
+        //     }
+        // }
 
         return threadCounts;
     }
 
-
     static double measureMicroseconds(const IMatrixOperation& op, const Matrix& A, const Matrix& B, int iterations = 3) {
-        // Warmup
         op.execute(A, B);
 
         double totalUs = 0.0;
         for (int i = 0; i < iterations; ++i) {
-            auto start = chrono::high_resolution_clock::now();
+            auto start = high_resolution_clock::now();
             Matrix res = op.execute(A, B);
-            auto end = chrono::high_resolution_clock::now();
-            totalUs += chrono::duration<double, micro>(end - start).count();
+            auto end = high_resolution_clock::now();
+            totalUs += duration<double, micro>(end - start).count();
         }
         return totalUs / iterations;
     }
@@ -77,7 +80,7 @@ public:
         cout << "                  AUTOMATED MATRIX ADDITION BENCHMARK                   \n";
         cout << "=========================================================================\n";
         cout << " Matrix Size: " << A.getRows() << " x " << A.getCols() 
-                  << " (" << A.getTotalElements() << " elements)\n";
+             << " (" << A.getTotalElements() << " elements)\n";
         cout << " Hardware Concurrency (Logical Cores): " << thread::hardware_concurrency() << "\n";
         cout << " Target Max Threads for Sampling: " << maxThreads << "\n";
         cout << "-------------------------------------------------------------------------\n";
@@ -87,18 +90,18 @@ public:
         double baselineMs = baselineUs / 1000.0;
 
         cout << " BASELINE (Sequential Single-Threaded): " 
-                  << fixed << setprecision(2) << baselineUs << " us (" << baselineMs << " ms)\n";
+             << fixed << setprecision(2) << baselineUs << " us (" << baselineMs << " ms)\n";
         cout << "-------------------------------------------------------------------------\n\n";
 
         vector<size_t> sampleCounts = generateAdaptiveThreadCounts(maxThreads);
 
         cout << left 
-                  << setw(12) << "| Threads" 
-                  << setw(16) << "| Actual Threads" 
-                  << setw(14) << "| Time (us)" 
-                  << setw(14) << "| Time (ms)" 
-                  << setw(14) << "| Speedup (x)" 
-                  << setw(16) << "| Efficiency (%)" << "|\n";
+             << setw(12) << "| Threads" 
+             << setw(16) << "| Actual Threads" 
+             << setw(14) << "| Time (us)" 
+             << setw(14) << "| Time (ms)" 
+             << setw(14) << "| Speedup (x)" 
+             << setw(16) << "| Efficiency (%)" << "|\n";
         cout << "|------------|----------------|--------------|--------------|--------------|----------------|\n";
 
         vector<BenchmarkResult> results;
@@ -117,12 +120,12 @@ public:
             results.push_back({ reqThreads, actualThreads, parUs, parMs, speedup, efficiency });
 
             cout << left 
-                      << "| " << setw(11) << reqThreads 
-                      << "| " << setw(15) << actualThreads 
-                      << "| " << setw(13) << fixed << setprecision(2) << parUs 
-                      << "| " << setw(13) << fixed << setprecision(3) << parMs 
-                      << "| " << setw(13) << fixed << setprecision(2) << speedup 
-                      << "| " << setw(15) << fixed << setprecision(1) << efficiency << "|\n";
+                 << "| " << setw(11) << reqThreads 
+                 << "| " << setw(15) << actualThreads 
+                 << "| " << setw(13) << fixed << setprecision(2) << parUs 
+                 << "| " << setw(13) << fixed << setprecision(3) << parMs 
+                 << "| " << setw(13) << fixed << setprecision(2) << speedup 
+                 << "| " << setw(15) << fixed << setprecision(1) << efficiency << "|\n";
         }
         cout << "-------------------------------------------------------------------------\n";
 
@@ -156,45 +159,45 @@ public:
         SequentialAddOperation seqSubOp;
         ParallelAddOperation parSubOp(thread::hardware_concurrency());
 
-        auto t1_start = chrono::high_resolution_clock::now();
+        auto t1_start = high_resolution_clock::now();
         Matrix resSeq = chainOp.executeSequential(chain, seqSubOp);
-        auto t1_end = chrono::high_resolution_clock::now();
-        double seqUs = chrono::duration<double, micro>(t1_end - t1_start).count();
+        auto t1_end = high_resolution_clock::now();
+        double seqUs = duration<double, micro>(t1_end - t1_start).count();
 
-        auto t2_start = chrono::high_resolution_clock::now();
+        auto t2_start = high_resolution_clock::now();
         Matrix resTreeSeq = chainOp.executeParallel(chain, seqSubOp);
-        auto t2_end = chrono::high_resolution_clock::now();
-        double treeSeqUs = chrono::duration<double, micro>(t2_end - t2_start).count();
+        auto t2_end = high_resolution_clock::now();
+        double treeSeqUs = duration<double, micro>(t2_end - t2_start).count();
 
-        auto t3_start = chrono::high_resolution_clock::now();
+        auto t3_start = high_resolution_clock::now();
         Matrix resTreePar = chainOp.executeParallel(chain, parSubOp);
-        auto t3_end = chrono::high_resolution_clock::now();
-        double treeParUs = chrono::duration<double, micro>(t3_end - t3_start).count();
+        auto t3_end = high_resolution_clock::now();
+        double treeParUs = duration<double, micro>(t3_end - t3_start).count();
 
         cout << left
-                  << setw(45) << " Method"
-                  << setw(15) << " Time (us)"
-                  << setw(15) << " Time (ms)"
-                  << setw(15) << " Speedup (x)" << "\n";
+             << setw(45) << " Method"
+             << setw(15) << " Time (us)"
+             << setw(15) << " Time (ms)"
+             << setw(15) << " Speedup (x)" << "\n";
         cout << "-------------------------------------------------------------------------\n";
 
         cout << left 
-                  << setw(45) << " 1. Sequential Linear Chain"
-                  << setw(15) << fixed << setprecision(2) << seqUs
-                  << setw(15) << fixed << setprecision(3) << (seqUs / 1000.0)
-                  << setw(15) << "1.00x (Baseline)\n";
+             << setw(45) << " 1. Sequential Linear Chain"
+             << setw(15) << fixed << setprecision(2) << seqUs
+             << setw(15) << fixed << setprecision(3) << (seqUs / 1000.0)
+             << setw(15) << "1.00x (Baseline)\n";
 
         cout << left 
-                  << setw(45) << " 2. Binary Tree Task Parallelism (async)"
-                  << setw(15) << fixed << setprecision(2) << treeSeqUs
-                  << setw(15) << fixed << setprecision(3) << (treeSeqUs / 1000.0)
-                  << setw(15) << fixed << setprecision(2) << (seqUs / treeSeqUs) << "x\n";
+             << setw(45) << " 2. Binary Tree Task Parallelism (async)"
+             << setw(15) << fixed << setprecision(2) << treeSeqUs
+             << setw(15) << fixed << setprecision(3) << (treeSeqUs / 1000.0)
+             << setw(15) << fixed << setprecision(2) << (seqUs / treeSeqUs) << "x\n";
 
         cout << left 
-                  << setw(45) << " 3. Binary Tree + Threaded Sub-Ops (Hybrid)"
-                  << setw(15) << fixed << setprecision(2) << treeParUs
-                  << setw(15) << fixed << setprecision(3) << (treeParUs / 1000.0)
-                  << setw(15) << fixed << setprecision(2) << (seqUs / treeParUs) << "x\n";
+             << setw(45) << " 3. Binary Tree + Threaded Sub-Ops (Hybrid)"
+             << setw(15) << fixed << setprecision(2) << treeParUs
+             << setw(15) << fixed << setprecision(3) << (treeParUs / 1000.0)
+             << setw(15) << fixed << setprecision(2) << (seqUs / treeParUs) << "x\n";
 
         cout << "=========================================================================\n\n";
     }
