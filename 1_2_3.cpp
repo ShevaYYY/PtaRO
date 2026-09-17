@@ -2,10 +2,13 @@
 #include <vector>
 #include <limits>
 #include <chrono>
+#include <string>
 
 #include "Matrix.hpp"
 #include "SequentialAddOperation.hpp"
 #include "ParallelAddOperation.hpp"
+#include "SequentialMultiplyOperation.hpp"
+#include "ParallelMultiplyOperation.hpp"
 #include "ChainMatrixAddOperation.hpp"
 #include "MatrixBenchmarkSuite.hpp"
 
@@ -16,11 +19,12 @@ void printMenu() {
     cout << "\n=========================================================\n";
     cout << "    C++17 CONSOLE MATRIX ADDITION & BENCHMARK SUITE      \n";
     cout << "=========================================================\n";
-    cout << " [1] Згенерувати матриці (Розмірність R x C)\n";
-    cout << " [2] Лінійне додавання (Baseline, 1 потік, без async/thread)\n";
-    cout << " [3] Паралельне додавання (Ввід кількості потоків вручну)\n";
-    cout << " [4] Авто-бенчмарк (Адаптивні кроки від 1 до N потоків)\n";
-    cout << " [5] Бенчмарк ланцюжка матриць (A + B + C + D... Бінарне дерево vs Лінійне)\n";
+    cout << " [1] Згенерувати матриці A та B (R x C)\n";
+    cout << " [2] Лінійне додавання (Baseline)\n";
+    cout << " [3] Паралельне додавання (thread)\n";
+    cout << " [4] Авто-бенчмарк ДОДАВАННЯ (Smart Step Sampling)\n";
+    cout << " [5] Авто-бенчмарк МНОЖЕННЯ (Smart Step Sampling)\n";
+    cout << " [6] Бенчмарк ланцюжка матриць\n";
     cout << " [0] Вихід\n";
     cout << "=========================================================\n";
     cout << " Оберіть опцію: ";
@@ -31,11 +35,16 @@ void clearInputBuffer() {
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
-int main() {
-    #ifdef _WIN32
-        system("chcp 65001 > nul");
-    #endif
+size_t readMaxThreads(size_t defaultVal = 240) {
+    size_t val = defaultVal;
+    if (cin >> val && val > 0) {
+        return val;
+    }
+    clearInputBuffer();
+    return defaultVal;
+}
 
+int main() {
     Matrix matrixA;
     Matrix matrixB;
     bool matricesGenerated = false;
@@ -135,24 +144,59 @@ int main() {
                         cout << "[Увага] Спочатку згенеруйте матриці (Опція 1).\n";
                         break;
                     }
-                    size_t maxThreads = 240;
-                    cout << "\n--- Авто-бенчмарк (Smart Step Sampling) ---\n";
-                    cout << "Введіть максимальну кількість потоків для бенчмарку (за замовчуванням 240): ";
-                    clearInputBuffer();
-                    string inputStr;
-                    getline(cin, inputStr);
-                    if (!inputStr.empty()) {
-                        try {
-                            maxThreads = stoull(inputStr);
-                        } catch (...) {
-                            maxThreads = 240;
-                        }
-                    }
+                    cout << "\n--- Авто-бенчмарк ДОДАВАННЯ (Smart Step Sampling) ---\n";
+                    cout << "Введіть максимальну кількість потоків для бенчмарку (наприклад, 32 або 240): ";
+                    size_t maxThreads = readMaxThreads(240);
 
                     MatrixBenchmarkSuite::runAutoBenchmark(matrixA, matrixB, maxThreads);
                     break;
                 }
                 case 5: {
+                    cout << "\n--- Авто-бенчмарк МНОЖЕННЯ МАТРИЦЬ (Smart Step Sampling) ---\n";
+                    bool useExisting = false;
+                    if (matricesGenerated && matrixA.getCols() == matrixB.getRows()) {
+                        cout << "Знайдено згенеровані матриці A (" << matrixA.getRows() << "x" << matrixA.getCols() 
+                             << ") та B (" << matrixB.getRows() << "x" << matrixB.getCols() << ").\n";
+                        cout << "Використати існуючі матриці A та B? (1 - Так, 0 - Ні, згенерувати нові): ";
+                        int choiceExisting = 1;
+                        if (cin >> choiceExisting && choiceExisting == 1) {
+                            useExisting = true;
+                        }
+                    }
+
+                    Matrix multA, multB;
+                    if (useExisting) {
+                        multA = matrixA;
+                        multB = matrixB;
+                    } else {
+                        size_t rowsA = 0, colsA = 0, colsB = 0;
+                        cout << "Введіть розмірність матриці A (Рядки N, Стовпчики M): ";
+                        if (!(cin >> rowsA >> colsA) || rowsA == 0 || colsA == 0) {
+                            cout << "[Помилка] Розмірності мають бути > 0!\n";
+                            clearInputBuffer();
+                            break;
+                        }
+                        cout << "Введіть кількість стовпчиків матриці B (K) [Рядки M = " << colsA << "]: ";
+                        if (!(cin >> colsB) || colsB == 0) {
+                            cout << "[Помилка] Стовпчики K мають бути > 0!\n";
+                            clearInputBuffer();
+                            break;
+                        }
+
+                        cout << "Генерація сумісних матриць A (" << rowsA << "x" << colsA << ") та B (" << colsA << "x" << colsB << ")...\n";
+                        multA = Matrix(rowsA, colsA);
+                        multB = Matrix(colsA, colsB);
+                        multA.randomize(1.0, 50.0);
+                        multB.randomize(1.0, 50.0);
+                    }
+
+                    cout << "Введіть максимальну кількість потоків для бенчмарку (наприклад, 32 або 240): ";
+                    size_t maxThreads = readMaxThreads(240);
+
+                    MatrixBenchmarkSuite::runMultiplyBenchmark(multA, multB, maxThreads);
+                    break;
+                }
+                case 6: {
                     cout << "\n--- Бенчмарк додавання ланцюжка матриць ---\n";
                     size_t count = 4, r = 1000, c = 1000;
                     cout << "Кількість матриць у ланцюжку (наприклад, 4, 8, 16): ";

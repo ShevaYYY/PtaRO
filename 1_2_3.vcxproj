@@ -147,6 +147,8 @@
     <ClInclude Include="IMatrixOperation.hpp" />
     <ClInclude Include="SequentialAddOperation.hpp" />
     <ClInclude Include="ParallelAddOperation.hpp" />
+    <ClInclude Include="SequentialMultiplyOperation.hpp" />
+    <ClInclude Include="ParallelMultiplyOperation.hpp" />
     <ClInclude Include="ChainMatrixAddOperation.hpp" />
     <ClInclude Include="MatrixBenchmarkSuite.hpp" />
   </ItemGroup>

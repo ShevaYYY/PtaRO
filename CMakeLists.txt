@@ -18,6 +18,8 @@ add_executable(matrix_app
     IMatrixOperation.hpp
     SequentialAddOperation.hpp
     ParallelAddOperation.hpp
+    SequentialMultiplyOperation.hpp
+    ParallelMultiplyOperation.hpp
     ChainMatrixAddOperation.hpp
     MatrixBenchmarkSuite.hpp
 )
