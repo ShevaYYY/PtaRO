@@ -22,7 +22,32 @@ add_executable(matrix_app
     ParallelMultiplyOperation.hpp
     ChainMatrixAddOperation.hpp
     MatrixBenchmarkSuite.hpp
+    include/SequentialGaussSolver.hpp
+    src/SequentialGaussSolver.cpp
+    include/ParallelGaussSolver.hpp
+    src/ParallelGaussSolver.cpp
 )
+
+add_executable(test_runner
+    test_runner.cpp
+    Matrix.hpp
+    ThreadChunkDistributor.hpp
+    IMatrixOperation.hpp
+    SequentialAddOperation.hpp
+    ParallelAddOperation.hpp
+    SequentialMultiplyOperation.hpp
+    ParallelMultiplyOperation.hpp
+    ChainMatrixAddOperation.hpp
+    MatrixBenchmarkSuite.hpp
+    include/SequentialGaussSolver.hpp
+    src/SequentialGaussSolver.cpp
+    include/ParallelGaussSolver.hpp
+    src/ParallelGaussSolver.cpp
+)
+
+target_include_directories(matrix_app PRIVATE include .)
+target_include_directories(test_runner PRIVATE include .)
 
 find_package(Threads REQUIRED)
 target_link_libraries(matrix_app PRIVATE Threads::Threads)
+target_link_libraries(test_runner PRIVATE Threads::Threads)

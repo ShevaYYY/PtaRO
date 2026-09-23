@@ -11,6 +11,8 @@
 #include "ParallelMultiplyOperation.hpp"
 #include "ChainMatrixAddOperation.hpp"
 #include "MatrixBenchmarkSuite.hpp"
+#include "include/SequentialGaussSolver.hpp"
+#include "include/ParallelGaussSolver.hpp"
 
 using namespace std;
 using namespace std::chrono;
@@ -24,7 +26,8 @@ void printMenu() {
     cout << " [3] Паралельне додавання (thread)\n";
     cout << " [4] Авто-бенчмарк ДОДАВАННЯ (Smart Step Sampling)\n";
     cout << " [5] Авто-бенчмарк МНОЖЕННЯ (Smart Step Sampling)\n";
-    cout << " [6] Бенчмарк ланцюжка матриць\n";
+    cout << " [6] Авто-бенчмарк СЛАР (метод Гаусса)\n";
+    cout << " [7] Бенчмарк ланцюжка матриць\n";
     cout << " [0] Вихід\n";
     cout << "=========================================================\n";
     cout << " Оберіть опцію: ";
@@ -201,6 +204,21 @@ int main() {
                     break;
                 }
                 case 6: {
+                    cout << "\n--- Авто-бенчмарк СЛАР (метод Гаусса) ---\n";
+                    size_t systemSize = 500;
+                    cout << "Введіть розмірність системи N (кількість рівнянь/змінних): ";
+                    if (!(cin >> systemSize) || systemSize == 0) {
+                        cout << "[Помилка] Розмірність N має бути > 0!\n";
+                        clearInputBuffer();
+                        break;
+                    }
+                    cout << "Введіть максимальну кількість потоків для бенчмарку (наприклад, 32 або 240): ";
+                    size_t maxThreads = readMaxThreads(240);
+
+                    MatrixBenchmarkSuite::runGaussBenchmark(systemSize, maxThreads);
+                    break;
+                }
+                case 7: {
                     cout << "\n--- Бенчмарк додавання ланцюжка матриць ---\n";
                     size_t count = 4, r = 1000, c = 1000;
                     cout << "Кількість матриць у ланцюжку (наприклад, 4, 8, 16): ";

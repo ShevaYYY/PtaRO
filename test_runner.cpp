@@ -11,6 +11,8 @@
 #include "ParallelMultiplyOperation.hpp"
 #include "ChainMatrixAddOperation.hpp"
 #include "MatrixBenchmarkSuite.hpp"
+#include "include/SequentialGaussSolver.hpp"
+#include "include/ParallelGaussSolver.hpp"
 
 using namespace std;
 
@@ -82,11 +84,6 @@ void testMultiplicationCorrectnessAndEquivalence() {
     SequentialMultiplyOperation seqMultOp;
     Matrix C = seqMultOp.execute(A, B);
 
-    // Expected C:
-    // C(0,0) = 1*7 + 2*9 + 3*2 = 7 + 18 + 6 = 31
-    // C(0,1) = 1*8 + 2*1 + 3*3 = 8 + 2 + 9 = 19
-    // C(1,0) = 4*7 + 5*9 + 6*2 = 28 + 45 + 12 = 85
-    // C(1,1) = 4*8 + 5*1 + 6*3 = 32 + 5 + 18 = 55
     assert(abs(C(0, 0) - 31.0) < 1e-9);
     assert(abs(C(0, 1) - 19.0) < 1e-9);
     assert(abs(C(1, 0) - 85.0) < 1e-9);
@@ -152,6 +149,66 @@ void testBenchmarkSampling() {
     cout << "PASSED (Total samples up to 240 threads: " << steps.size() << ")\n";
 }
 
+void testGaussSolverCorrectnessAndEquivalence() {
+    cout << "[Test 7] Sequential vs Parallel Gaussian Elimination correctness... ";
+    
+    // Known 3x3 SLAE:
+    // 2x0 + 1x1 - 1x2 = 8
+    // -3x0 - 1x1 + 2x2 = -11
+    // -2x0 + 1x1 + 2x2 = -3
+    // Exact solution: x0 = 2, x1 = 3, x2 = -1
+    Matrix aug(3, 4);
+    aug(0,0) = 2;  aug(0,1) = 1;  aug(0,2) = -1; aug(0,3) = 8;
+    aug(1,0) = -3; aug(1,1) = -1; aug(1,2) = 2;  aug(1,3) = -11;
+    aug(2,0) = -2; aug(2,1) = 1;  aug(2,2) = 2;  aug(2,3) = -3;
+
+    SequentialGaussSolver seqSolver;
+    ParallelGaussSolver parSolver(4);
+
+    vector<double> xSeq = seqSolver.solve(aug);
+    vector<double> xPar = parSolver.solve(aug);
+
+    assert(xSeq.size() == 3);
+    assert(xPar.size() == 3);
+
+    assert(abs(xSeq[0] - 2.0) < 1e-9);
+    assert(abs(xSeq[1] - 3.0) < 1e-9);
+    assert(abs(xSeq[2] - (-1.0)) < 1e-9);
+
+    assert(abs(xPar[0] - 2.0) < 1e-9);
+    assert(abs(xPar[1] - 3.0) < 1e-9);
+    assert(abs(xPar[2] - (-1.0)) < 1e-9);
+
+    // Random larger well-conditioned matrix equivalence test (100 x 101)
+    size_t N = 100;
+    Matrix randAug = MatrixBenchmarkSuite::generateWellConditionedSLAE(N);
+
+    vector<double> randSeqX = seqSolver.solve(randAug);
+    vector<double> randParX = parSolver.solve(randAug);
+
+    assert(randSeqX.size() == N);
+    assert(randParX.size() == N);
+
+    for (size_t i = 0; i < N; ++i) {
+        assert(abs(randSeqX[i] - randParX[i]) < 1e-7);
+    }
+
+    // Zero pivot exception check
+    Matrix singularAug(2, 3);
+    singularAug(0, 0) = 0; singularAug(0, 1) = 0; singularAug(0, 2) = 5;
+    singularAug(1, 0) = 0; singularAug(1, 1) = 0; singularAug(1, 2) = 10;
+
+    bool caughtZeroPivot = false;
+    try {
+        seqSolver.solve(singularAug);
+    } catch (const runtime_error&) {
+        caughtZeroPivot = true;
+    }
+    assert(caughtZeroPivot);
+
+    cout << "PASSED\n";
+}
+
 int main() {
     cout << "========================================\n";
     cout << "  RUNNING AUTOMATED UNIT & INTEGRATION TESTS  \n";
@@ -162,6 +219,7 @@ int main() {
     testMultiplicationCorrectnessAndEquivalence();
     testChainAddition();
     testBenchmarkSampling();
+    testGaussSolverCorrectnessAndEquivalence();
     cout << "========================================\n";
     cout << " ALL VERIFICATION TESTS PASSED SUCCESSFULLY! \n";
     cout << "========================================\n";
