@@ -5,10 +5,6 @@
 
 using namespace std;
 
-/**
- * @brief Sequential matrix multiplication operation (Baseline).
- * Uses cache-optimized i -> k -> j loop order for optimal spatial locality and 1D memory access.
- */
 class SequentialMultiplyOperation : public IMatrixOperation {
 public:
     Matrix execute(const Matrix& A, const Matrix& B) const override {
@@ -26,7 +22,6 @@ public:
         const auto& dataB = B.data();
         auto& dataRes = result.data();
 
-        // Cache-optimized loop order: i -> k -> j
         for (size_t i = 0; i < rowsA; ++i) {
             size_t rowOffsetA = i * colsA;
             size_t rowOffsetRes = i * colsB;
@@ -38,7 +33,6 @@ public:
                 }
             }
         }
-
         return result;
     }
 

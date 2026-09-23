@@ -36,36 +36,50 @@ public:
      * Adaptive steps (4, 8, 20) for larger thread counts.
      */
     static vector<size_t> generateAdaptiveThreadCounts(size_t maxThreads = 240) {
-        vector<size_t> threadCounts;
-        size_t hw = thread::hardware_concurrency();
-        size_t fastZone = hw > 0 ? hw * 2 : 16;
+        vector<size_t> baseSteps = {1, 2, 4, 6, 8, 12, 16, 24, 32, 64, 100};
+        vector<size_t> result;
 
-        // Zone 1: Step 1 up to fastZone (e.g., 2 * hardware_concurrency)
-        size_t limit1 = min(fastZone, maxThreads);
-        for (size_t t = 1; t <= limit1; ++t) {
-            threadCounts.push_back(t);
-        }
-
-        // Zone 2: Adaptive steps beyond fastZone
-        size_t t = limit1;
-        while (t < maxThreads) {
-            size_t step = 4;
-            if (t >= fastZone * 4) {
-                step = 20;
-            } else if (t >= fastZone * 2) {
-                step = 8;
-            }
-
-            t += step;
-            if (t > maxThreads) {
-                t = maxThreads;
-            }
-            if (threadCounts.back() != t) {
-                threadCounts.push_back(t);
+        for (size_t threads : baseSteps) {
+            if (threads <= maxThreads) {
+                result.push_back(threads);
             }
         }
 
-        return threadCounts;
+        if (!result.empty() && result.back() < maxThreads) {
+            result.push_back(maxThreads);
+        }
+
+        return result;
+        // vector<size_t> threadCounts;
+        // size_t hw = thread::hardware_concurrency();
+        // size_t fastZone = hw > 0 ? hw * 2 : 16;
+
+        // // Zone 1: Step 1 up to fastZone (e.g., 2 * hardware_concurrency)
+        // size_t limit1 = min(fastZone, maxThreads);
+        // for (size_t t = 1; t <= limit1; ++t) {
+        //     threadCounts.push_back(t);
+        // }
+
+        // // Zone 2: Adaptive steps beyond fastZone
+        // size_t t = limit1;
+        // while (t < maxThreads) {
+        //     size_t step = 4;
+        //     if (t >= fastZone * 4) {
+        //         step = 20;
+        //     } else if (t >= fastZone * 2) {
+        //         step = 8;
+        //     }
+
+        //     t += step;
+        //     if (t > maxThreads) {
+        //         t = maxThreads;
+        //     }
+        //     if (threadCounts.back() != t) {
+        //         threadCounts.push_back(t);
+        //     }
+        // }
+
+        // return threadCounts;
     }
 
     /**

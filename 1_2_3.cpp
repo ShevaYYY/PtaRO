@@ -45,6 +45,10 @@ size_t readMaxThreads(size_t defaultVal = 240) {
 }
 
 int main() {
+    #ifdef _WIN32
+        system("chcp 65001 > nul");
+    #endif
+
     Matrix matrixA;
     Matrix matrixB;
     bool matricesGenerated = false;

@@ -9,11 +9,6 @@
 
 using namespace std;
 
-/**
- * @brief Multi-threaded matrix multiplication using std::thread and 1D Row Chunking.
- * Mutex-free & race-condition-free: Each thread computes a unique slice of rows [startRow, endRow).
- * Cache-optimized loop order: i -> k -> j.
- */
 class ParallelMultiplyOperation : public IMatrixOperation {
 private:
     size_t requestedThreads_;
@@ -34,7 +29,6 @@ public:
         if (A.getCols() != B.getRows()) {
             throw invalid_argument("Matrix dimension mismatch for multiplication! (colsA != rowsB)");
         }
-
         size_t rowsA = A.getRows();
         size_t colsA = A.getCols();
         size_t colsB = B.getCols();
@@ -44,8 +38,6 @@ public:
         if (rowsA == 0 || colsB == 0) {
             return result;
         }
-
-        // 1D Row Chunking across rows of Matrix A
         auto rowChunks = ThreadChunkDistributor::distribute(rowsA, requestedThreads_);
         size_t numWorkerThreads = rowChunks.size();
 
@@ -71,13 +63,11 @@ public:
                 }
             });
         }
-
         for (auto& worker : workers) {
             if (worker.joinable()) {
                 worker.join();
             }
         }
-
         return result;
     }
 
