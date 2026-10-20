@@ -7,8 +7,8 @@
 #include "ParallelMultiplyOperation.hpp"
 #include "ChainMatrixAddOperation.hpp"
 #include "ThreadChunkDistributor.hpp"
-#include "include/SequentialGaussSolver.hpp"
-#include "include/ParallelGaussSolver.hpp"
+#include "SequentialGaussSolver.hpp"
+#include "ParallelGaussSolver.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -32,6 +32,7 @@ struct BenchmarkResult {
 
 class MatrixBenchmarkSuite {
 public:
+
     static vector<size_t> generateAdaptiveThreadCounts(size_t maxThreads = 240) {
         vector<size_t> baseSteps = {1, 2, 4, 6, 8, 12, 16, 24, 32, 64, 100};
         vector<size_t> result;
@@ -50,7 +51,6 @@ public:
     }
 
     static double measureMicroseconds(const IMatrixOperation& op, const Matrix& A, const Matrix& B, int iterations = 3) {
-        // Warmup
         op.execute(A, B);
 
         double totalUs = 0.0;
@@ -63,6 +63,7 @@ public:
         return totalUs / iterations;
     }
 
+
     static void runAutoBenchmark(const Matrix& A, const Matrix& B, size_t maxThreads = 240) {
         cout << "\n=========================================================================\n";
         cout << "                  AUTOMATED MATRIX ADDITION BENCHMARK                   \n";
@@ -73,6 +74,7 @@ public:
         cout << " Target Max Threads for Sampling: " << maxThreads << "\n";
         cout << "-------------------------------------------------------------------------\n";
 
+        // 1. Measure Baseline Sequential Time
         SequentialAddOperation seqOp;
         double baselineUs = measureMicroseconds(seqOp, A, B, 3);
         double baselineMs = baselineUs / 1000.0;
@@ -270,7 +272,6 @@ public:
         Matrix augmented(N, N + 1);
         augmented.randomize(1.0, 50.0);
 
-        // Enhance diagonal dominance
         for (size_t i = 0; i < N; ++i) {
             augmented(i, i) += static_cast<double>(N) * 10.0;
         }
@@ -281,7 +282,6 @@ public:
 
     template <typename SolverType>
     static double measureGaussMicroseconds(const SolverType& solver, const Matrix& augmented, int iterations = 2) {
-        
         solver.solve(augmented);
 
         double totalUs = 0.0;
@@ -294,7 +294,6 @@ public:
         return totalUs / iterations;
     }
 
-  
     static void runGaussBenchmark(size_t systemSize, size_t maxThreads = 240) {
         if (systemSize == 0) {
             cout << "[Error] System size N must be > 0!\n";

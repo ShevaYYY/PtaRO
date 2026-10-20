@@ -11,8 +11,8 @@
 #include "ParallelMultiplyOperation.hpp"
 #include "ChainMatrixAddOperation.hpp"
 #include "MatrixBenchmarkSuite.hpp"
-#include "include/SequentialGaussSolver.hpp"
-#include "include/ParallelGaussSolver.hpp"
+#include "SequentialGaussSolver.hpp"
+#include "ParallelGaussSolver.hpp"
 
 using namespace std;
 

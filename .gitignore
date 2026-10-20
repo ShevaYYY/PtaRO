@@ -1,0 +1,46 @@
+# CMake Build Artifacts
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Executables & Compiled Binaries
+*.exe
+*.out
+*.app
+*.o
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.a
+*.so
+*.dylib
+
+# Specific Executables in root
+matrix_app.exe
+test_runner.exe
+
+# Visual Studio & MSVC Artifacts
+.vs/
+x64/
+x86/
+Debug/
+Release/
+*.vcxproj.user
+*.vcxproj.idb
+*.sln.docstates
+*.suo
+
+# IDE & Editor Temporary Files
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs and Temporary Files
+*.log
