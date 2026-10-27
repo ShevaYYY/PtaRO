@@ -154,6 +154,8 @@
     <ClInclude Include="ParallelGaussSolver.hpp" />
     <ClInclude Include="SequentialFloydSolver.hpp" />
     <ClInclude Include="ParallelFloydSolver.hpp" />
+    <ClInclude Include="SequentialDijkstraSolver.hpp" />
+    <ClInclude Include="ParallelDijkstraSolver.hpp" />
     <ClInclude Include="MatrixBenchmarkSuite.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

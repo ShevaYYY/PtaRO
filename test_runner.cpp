@@ -15,6 +15,8 @@
 #include "ParallelGaussSolver.hpp"
 #include "SequentialFloydSolver.hpp"
 #include "ParallelFloydSolver.hpp"
+#include "SequentialDijkstraSolver.hpp"
+#include "ParallelDijkstraSolver.hpp"
 
 using namespace std;
 
@@ -291,6 +293,97 @@ void testFloydWarshallCorrectnessAndEquivalence() {
     cout << "PASSED\n";
 }
 
+
+void testDijkstraCorrectnessAndEquivalence() {
+    cout << "[Test 9] Sequential vs Parallel Dijkstra correctness... ";
+
+    // Known 5-vertex directed weighted graph (CLRS Example)
+    // 0 -> 1 (10), 0 -> 4 (5), 1 -> 2 (1), 1 -> 4 (2), 4 -> 1 (3), 4 -> 2 (9), 4 -> 3 (2), 2 -> 3 (4), 3 -> 2 (6), 3 -> 0 (7)
+    // Shortest paths from 0:
+    // 0: 0, 1: 8 (0->4->1), 2: 9 (0->4->1->2), 3: 7 (0->4->3), 4: 5 (0->4)
+    const double INF = SequentialDijkstraSolver::INF;
+    Matrix graph(5, 5, INF);
+    for (size_t i = 0; i < 5; ++i) {
+        graph(i, i) = 0.0;
+    }
+    graph(0, 1) = 10.0;
+    graph(0, 4) = 5.0;
+    graph(1, 2) = 1.0;
+    graph(1, 4) = 2.0;
+    graph(4, 1) = 3.0;
+    graph(4, 2) = 9.0;
+    graph(4, 3) = 2.0;
+    graph(2, 3) = 4.0;
+    graph(3, 2) = 6.0;
+    graph(3, 0) = 7.0;
+
+    SequentialDijkstraSolver seqSolver;
+    ParallelDijkstraSolver parSolver(4);
+
+    vector<double> distSeq = seqSolver.solve(graph, 0);
+    vector<double> distPar = parSolver.solve(graph, 0);
+
+    assert(distSeq.size() == 5);
+    assert(distPar.size() == 5);
+
+    // Verify known shortest distances
+    assert(abs(distSeq[0] - 0.0) < 1e-9);
+    assert(abs(distSeq[1] - 8.0) < 1e-9);
+    assert(abs(distSeq[2] - 9.0) < 1e-9);
+    assert(abs(distSeq[3] - 7.0) < 1e-9);
+    assert(abs(distSeq[4] - 5.0) < 1e-9);
+
+    for (size_t i = 0; i < 5; ++i) {
+        assert(abs(distSeq[i] - distPar[i]) < 1e-9);
+    }
+
+    // Verify unreachable node in disconnected graph
+    Matrix discGraph(3, 3, INF);
+    discGraph(0, 0) = 0.0; discGraph(1, 1) = 0.0; discGraph(2, 2) = 0.0;
+    discGraph(0, 1) = 4.0; // node 2 is disconnected
+    vector<double> discSeq = seqSolver.solve(discGraph, 0);
+    vector<double> discPar = parSolver.solve(discGraph, 0);
+    assert(abs(discSeq[0] - 0.0) < 1e-9);
+    assert(abs(discSeq[1] - 4.0) < 1e-9);
+    assert(abs(discSeq[2] - INF) < 1e-9);
+    assert(abs(discPar[2] - INF) < 1e-9);
+
+    // Equivalence test on a larger random graph (N = 100) with different thread counts
+    size_t N = 100;
+    Matrix randGraph = MatrixBenchmarkSuite::generateRandomGraph(N, 0.6);
+
+    vector<double> randSeq = seqSolver.solve(randGraph, 0);
+
+    for (size_t threads : {1, 2, 4, 8}) {
+        ParallelDijkstraSolver testPar(threads);
+        vector<double> randPar = testPar.solve(randGraph, 0);
+        assert(randPar.size() == N);
+        for (size_t i = 0; i < N; ++i) {
+            assert(abs(randSeq[i] - randPar[i]) < 1e-7);
+        }
+    }
+
+    // Exception handling checks
+    bool caughtNonSquare = false;
+    try {
+        Matrix nonSquare(3, 4);
+        seqSolver.solve(nonSquare, 0);
+    } catch (const invalid_argument&) {
+        caughtNonSquare = true;
+    }
+    assert(caughtNonSquare);
+
+    bool caughtOutOfRange = false;
+    try {
+        seqSolver.solve(graph, 10);
+    } catch (const out_of_range&) {
+        caughtOutOfRange = true;
+    }
+    assert(caughtOutOfRange);
+
+    cout << "PASSED\n";
+}
+
 int main() {
     cout << "========================================\n";
     cout << "  RUNNING AUTOMATED UNIT & INTEGRATION TESTS  \n";
@@ -303,6 +396,7 @@ int main() {
     testBenchmarkSampling();
     testGaussSolverCorrectnessAndEquivalence();
     testFloydWarshallCorrectnessAndEquivalence();
+    testDijkstraCorrectnessAndEquivalence();
     cout << "========================================\n";
     cout << " ALL VERIFICATION TESTS PASSED SUCCESSFULLY! \n";
     cout << "========================================\n";

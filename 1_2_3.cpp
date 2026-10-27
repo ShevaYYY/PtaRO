@@ -15,6 +15,8 @@
 #include "ParallelGaussSolver.hpp"
 #include "SequentialFloydSolver.hpp"
 #include "ParallelFloydSolver.hpp"
+#include "SequentialDijkstraSolver.hpp"
+#include "ParallelDijkstraSolver.hpp"
 
 using namespace std;
 using namespace std::chrono;
@@ -31,6 +33,9 @@ void printMenu() {
     cout << " [6] Авто-бенчмарк СЛАР (метод Гаусса)\n";
     cout << " [7] Бенчмарк ланцюжка матриць\n";
     cout << " [8] Авто-бенчмарк алгоритму Флойда (пошук найкоротших шляхів)\n";
+    cout << " [9] Пошук найкоротшої відстані Флойда між вузлами a та b\n";
+    cout << " [10] Ручний запуск алгоритму Дейкстри (послідовний та паралельний)\n";
+    cout << " [11] Авто-бенчмарк алгоритму Дейкстри (Smart Step Sampling)\n";
     cout << " [0] Вихід\n";
     cout << "=========================================================\n";
     cout << " Оберіть опцію: ";
@@ -316,8 +321,98 @@ int main() {
                     } else {
                         cout << " Помилка: індекси вершин виходять за межі діапазону (0 - " << N - 1 << ")!\n";
                     }
-                }   
-                
+                    break;
+                }
+                case 10: {
+                    cout << "\n=== РУЧНИЙ ЗАПУСК АЛГОРИТМУ ДЕЙКСТРИ ===\n";
+                    size_t N = 0;
+                    cout << "Введіть кількість вершин графа (N): ";
+                    if (!(cin >> N) || N == 0) {
+                        cout << "[Помилка] Кількість вершин N має бути > 0!\n";
+                        clearInputBuffer();
+                        break;
+                    }
+
+                    size_t startVertex = 0;
+                    cout << "Введіть номер початкової вершини (0 - " << N - 1 << "): ";
+                    if (!(cin >> startVertex) || startVertex >= N) {
+                        cout << "[Помилка] Початкова вершина має бути у діапазоні [0, " << N - 1 << "]!\n";
+                        clearInputBuffer();
+                        break;
+                    }
+
+                    size_t customThreads = 1;
+                    cout << "Введіть кількість потоків для паралельного розрахунку: ";
+                    if (!(cin >> customThreads) || customThreads == 0) {
+                        customThreads = thread::hardware_concurrency();
+                        cout << "Встановлено за замовчуванням: " << customThreads << " потоків.\n";
+                    }
+
+                    cout << "\nГенерація графа розміром " << N << " x " << N << " (ймовірність ребра 70%)...\n";
+                    Matrix graph = MatrixBenchmarkSuite::generateRandomGraph(N, 0.7);
+
+                    SequentialDijkstraSolver seqSolver;
+                    auto startSeq = high_resolution_clock::now();
+                    vector<double> distSeq = seqSolver.solve(graph, startVertex);
+                    auto endSeq = high_resolution_clock::now();
+                    double seqUs = duration<double, micro>(endSeq - startSeq).count();
+
+                    ParallelDijkstraSolver parSolver(customThreads);
+                    auto startPar = high_resolution_clock::now();
+                    vector<double> distPar = parSolver.solve(graph, startVertex);
+                    auto endPar = high_resolution_clock::now();
+                    double parUs = duration<double, micro>(endPar - startPar).count();
+
+                    cout << "\n-------------------------------------------------------------------------\n";
+                    cout << " Початкова вершина: " << startVertex << "\n";
+                    cout << " Послідовний час (Sequential): " << fixed << setprecision(2) 
+                         << seqUs << " us (" << (seqUs / 1000.0) << " ms)\n";
+                    cout << " Паралельний час (Parallel, " << customThreads << " потоків): " << fixed << setprecision(2) 
+                         << parUs << " us (" << (parUs / 1000.0) << " ms)\n";
+                    cout << " Прискорення (Speedup): " << fixed << setprecision(2) 
+                         << (seqUs / parUs) << "x\n";
+                    cout << "-------------------------------------------------------------------------\n";
+
+                    size_t printCount = min(N, static_cast<size_t>(10));
+                    cout << "Зразок найкоротших відстаней від вершини " << startVertex << " до перших " << printCount << " вершин:\n";
+                    for (size_t i = 0; i < printCount; ++i) {
+                        cout << "  -> до вершини " << i << ": ";
+                        if (distPar[i] >= ParallelDijkstraSolver::INF) {
+                            cout << "INF (недосяжна)\n";
+                        } else {
+                            cout << fixed << setprecision(2) << distPar[i] << "\n";
+                        }
+                    }
+                    if (N > 10) {
+                        cout << "  ... (всього " << N << " вершин)\n";
+                    }
+                    cout << "=========================================================================\n";
+                    break;
+                }
+                case 11: {
+                    cout << "\n--- Авто-бенчмарк алгоритму Дейкстри (Smart Step Sampling) ---\n";
+                    size_t graphSize = 1000;
+                    cout << "Введіть кількість вершин графа (N): ";
+                    if (!(cin >> graphSize) || graphSize == 0) {
+                        cout << "[Помилка] Кількість вершин N має бути > 0!\n";
+                        clearInputBuffer();
+                        break;
+                    }
+
+                    size_t startVertex = 0;
+                    cout << "Введіть номер початкової вершини (0 - " << graphSize - 1 << ", за замовчуванням 0): ";
+                    if (!(cin >> startVertex) || startVertex >= graphSize) {
+                        startVertex = 0;
+                        cout << "Встановлено за замовчуванням: 0\n";
+                        clearInputBuffer();
+                    }
+
+                    cout << "Введіть максимальну кількість потоків для бенчмарку (наприклад, 32 або 240): ";
+                    size_t maxThreads = readMaxThreads(240);
+
+                    MatrixBenchmarkSuite::runDijkstraBenchmark(graphSize, startVertex, maxThreads);
+                    break;
+                }
                 case 0:
                     cout << "\nЗавершення роботи програми. До побачення!\n";
                     break;
