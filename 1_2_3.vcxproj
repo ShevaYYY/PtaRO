@@ -150,6 +150,10 @@
     <ClInclude Include="SequentialMultiplyOperation.hpp" />
     <ClInclude Include="ParallelMultiplyOperation.hpp" />
     <ClInclude Include="ChainMatrixAddOperation.hpp" />
+    <ClInclude Include="SequentialGaussSolver.hpp" />
+    <ClInclude Include="ParallelGaussSolver.hpp" />
+    <ClInclude Include="SequentialFloydSolver.hpp" />
+    <ClInclude Include="ParallelFloydSolver.hpp" />
     <ClInclude Include="MatrixBenchmarkSuite.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

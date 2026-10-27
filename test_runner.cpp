@@ -13,6 +13,8 @@
 #include "MatrixBenchmarkSuite.hpp"
 #include "SequentialGaussSolver.hpp"
 #include "ParallelGaussSolver.hpp"
+#include "SequentialFloydSolver.hpp"
+#include "ParallelFloydSolver.hpp"
 
 using namespace std;
 
@@ -209,6 +211,86 @@ void testGaussSolverCorrectnessAndEquivalence() {
     cout << "PASSED\n";
 }
 
+void testFloydWarshallCorrectnessAndEquivalence() {
+    cout << "[Test 8] Sequential vs Parallel Floyd-Warshall correctness... ";
+
+    // Known 4-vertex directed weighted graph
+    // 0 -> 1 (5), 0 -> 3 (10), 1 -> 2 (3), 2 -> 3 (1)
+    // Shortest path from 0 to 3 should be 0->1->2->3 = 9 (instead of direct 10)
+    const double INF = SequentialFloydSolver::INF;
+    Matrix graph(4, 4, INF);
+    for (size_t i = 0; i < 4; ++i) {
+        graph(i, i) = 0.0;
+    }
+    graph(0, 1) = 5.0;
+    graph(0, 3) = 10.0;
+    graph(1, 2) = 3.0;
+    graph(2, 3) = 1.0;
+
+    SequentialFloydSolver seqSolver;
+    ParallelFloydSolver parSolver(4);
+
+    Matrix distSeq = seqSolver.solve(graph);
+    Matrix distPar = parSolver.solve(graph);
+
+    assert(distSeq.getRows() == 4 && distSeq.getCols() == 4);
+    assert(distPar.getRows() == 4 && distPar.getCols() == 4);
+
+    // Verify known shortest distances
+    assert(abs(distSeq(0, 0) - 0.0) < 1e-9);
+    assert(abs(distSeq(0, 1) - 5.0) < 1e-9);
+    assert(abs(distSeq(0, 2) - 8.0) < 1e-9);
+    assert(abs(distSeq(0, 3) - 9.0) < 1e-9); // 0->1->2->3 is 9, not 10!
+
+    assert(abs(distSeq(1, 0) - INF) < 1e-9);
+    assert(abs(distSeq(1, 1) - 0.0) < 1e-9);
+    assert(abs(distSeq(1, 2) - 3.0) < 1e-9);
+    assert(abs(distSeq(1, 3) - 4.0) < 1e-9);
+
+    assert(abs(distSeq(2, 0) - INF) < 1e-9);
+    assert(abs(distSeq(2, 1) - INF) < 1e-9);
+    assert(abs(distSeq(2, 2) - 0.0) < 1e-9);
+    assert(abs(distSeq(2, 3) - 1.0) < 1e-9);
+
+    assert(abs(distSeq(3, 0) - INF) < 1e-9);
+    assert(abs(distSeq(3, 1) - INF) < 1e-9);
+    assert(abs(distSeq(3, 2) - INF) < 1e-9);
+    assert(abs(distSeq(3, 3) - 0.0) < 1e-9);
+
+    // Verify parallel matches sequential on known graph
+    for (size_t i = 0; i < 4; ++i) {
+        for (size_t j = 0; j < 4; ++j) {
+            assert(abs(distSeq(i, j) - distPar(i, j)) < 1e-9);
+        }
+    }
+
+    // Equivalence test on a larger random graph
+    size_t N = 80;
+    Matrix randGraph = MatrixBenchmarkSuite::generateRandomGraph(N, 0.6);
+
+    Matrix randSeqDist = seqSolver.solve(randGraph);
+    Matrix randParDist = parSolver.solve(randGraph);
+
+    assert(randSeqDist.getRows() == N && randSeqDist.getCols() == N);
+    assert(randParDist.getRows() == N && randParDist.getCols() == N);
+
+    for (size_t i = 0; i < randSeqDist.getTotalElements(); ++i) {
+        assert(abs(randSeqDist.data()[i] - randParDist.data()[i]) < 1e-9);
+    }
+
+    // Invalid dimension exception check
+    bool caughtException = false;
+    try {
+        Matrix nonSquare(3, 4);
+        seqSolver.solve(nonSquare);
+    } catch (const invalid_argument&) {
+        caughtException = true;
+    }
+    assert(caughtException);
+
+    cout << "PASSED\n";
+}
+
 int main() {
     cout << "========================================\n";
     cout << "  RUNNING AUTOMATED UNIT & INTEGRATION TESTS  \n";
@@ -220,6 +302,7 @@ int main() {
     testChainAddition();
     testBenchmarkSampling();
     testGaussSolverCorrectnessAndEquivalence();
+    testFloydWarshallCorrectnessAndEquivalence();
     cout << "========================================\n";
     cout << " ALL VERIFICATION TESTS PASSED SUCCESSFULLY! \n";
     cout << "========================================\n";

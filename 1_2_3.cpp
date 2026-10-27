@@ -13,6 +13,8 @@
 #include "MatrixBenchmarkSuite.hpp"
 #include "SequentialGaussSolver.hpp"
 #include "ParallelGaussSolver.hpp"
+#include "SequentialFloydSolver.hpp"
+#include "ParallelFloydSolver.hpp"
 
 using namespace std;
 using namespace std::chrono;
@@ -28,6 +30,7 @@ void printMenu() {
     cout << " [5] Авто-бенчмарк МНОЖЕННЯ (Smart Step Sampling)\n";
     cout << " [6] Авто-бенчмарк СЛАР (метод Гаусса)\n";
     cout << " [7] Бенчмарк ланцюжка матриць\n";
+    cout << " [8] Авто-бенчмарк алгоритму Флойда (пошук найкоротших шляхів)\n";
     cout << " [0] Вихід\n";
     cout << "=========================================================\n";
     cout << " Оберіть опцію: ";
@@ -244,6 +247,77 @@ int main() {
                     MatrixBenchmarkSuite::runChainBenchmark(chain);
                     break;
                 }
+                case 8: {
+                    cout << "\n--- Авто-бенчмарк алгоритму Флойда (пошук найкоротших шляхів) ---\n";
+                    size_t graphSize = 300;
+                    cout << "Введіть кількість вершин графа (N): ";
+                    if (!(cin >> graphSize) || graphSize == 0) {
+                        cout << "[Помилка] Кількість вершин N має бути > 0!\n";
+                        clearInputBuffer();
+                        break;
+                    }
+                    cout << "Введіть максимальну кількість потоків для бенчмарку (наприклад, 32 або 240): ";
+                    size_t maxThreads = readMaxThreads(240);
+
+                    MatrixBenchmarkSuite::runFloydBenchmark(graphSize, maxThreads);
+                    break;
+                }
+                case 9:{
+                    cout << "\n=== ПОШУК НАЙКОРОТШОЇ ВІДСТАНІ МІЖ ВУЗЛАМИ a та b ===\n";
+                    
+                    size_t N;
+                    cout << "Введіть кількість вершин графа (N): ";
+                    cin >> N;
+
+                    if (N == 0) {
+                        cout << "Помилка: кількість вершин має бути більше 0!\n";
+                        break;
+                    }
+
+
+                    Matrix graph(N, N, ParallelFloydSolver::INF);
+                    for (size_t i = 0; i < N; ++i) {
+                        graph(i, i) = 0.0;
+                    }
+                    for (size_t i = 0; i < N; ++i) {
+                        for (size_t j = 0; j < N; ++j) {
+                            if (i != j && (rand() % 100 < 40)) { 
+                                graph(i, j) = 1.0 + (rand() % 990);
+                            }
+                        }
+                    }
+
+                    size_t vertexA, vertexB, customThreads;
+                    cout << "Введіть номер початкової вершини a (0 - " << N - 1 << "): ";
+                    cin >> vertexA;
+                    cout << "Введіть номер кінцевої вершини b (0 - " << N - 1 << "): ";
+                    cin >> vertexB;
+                    cout << "Введіть кількість потоків для розрахунку: ";
+                    cin >> customThreads;
+
+                    if (vertexA < N && vertexB < N) {
+                        ParallelFloydSolver customSolver(customThreads);
+                        
+                        auto startTime = chrono::high_resolution_clock::now();
+                        Matrix distMatrix = customSolver.solve(graph);
+                        auto endTime = chrono::high_resolution_clock::now();
+                        
+                        double elapsedUs = chrono::duration<double, micro>(endTime - startTime).count();
+                        double distance = distMatrix(vertexA, vertexB);
+                        
+                        cout << "\n-------------------------------------------------------------------------\n";
+                        cout << " Час виконання розрахунку: " << fixed << setprecision(2) << elapsedUs << " us (" << elapsedUs / 1000.0 << " ms)\n";
+                        if (distance >= ParallelFloydSolver::INF) {
+                            cout << " Результат: Шляху між вершинами " << vertexA << " та " << vertexB << " не існує (INFINITY).\n";
+                        } else {
+                            cout << " Найкоротша відстань між вершинами " << vertexA << " та " << vertexB << " становить: " << distance << "\n";
+                        }
+                        cout << "=========================================================================\n";
+                    } else {
+                        cout << " Помилка: індекси вершин виходять за межі діапазону (0 - " << N - 1 << ")!\n";
+                    }
+                }   
+                
                 case 0:
                     cout << "\nЗавершення роботи програми. До побачення!\n";
                     break;

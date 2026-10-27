@@ -23,6 +23,8 @@ add_executable(matrix_app
     ChainMatrixAddOperation.hpp
     SequentialGaussSolver.hpp
     ParallelGaussSolver.hpp
+    SequentialFloydSolver.hpp
+    ParallelFloydSolver.hpp
     MatrixBenchmarkSuite.hpp
 )
 
@@ -38,6 +40,8 @@ add_executable(test_runner
     ChainMatrixAddOperation.hpp
     SequentialGaussSolver.hpp
     ParallelGaussSolver.hpp
+    SequentialFloydSolver.hpp
+    ParallelFloydSolver.hpp
     MatrixBenchmarkSuite.hpp
 )
 

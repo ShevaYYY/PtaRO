@@ -9,6 +9,8 @@
 #include "ThreadChunkDistributor.hpp"
 #include "SequentialGaussSolver.hpp"
 #include "ParallelGaussSolver.hpp"
+#include "SequentialFloydSolver.hpp"
+#include "ParallelFloydSolver.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -363,6 +365,119 @@ public:
 
         if (bestIt != results.end()) {
             cout << "\n>>> BEST GAUSS ELIMINATION PERFORMANCE RESULT <<<\n";
+            cout << " Optimal Thread Count : " << bestIt->requestedThreads << " threads\n";
+            cout << " Minimum Execution Time: " << bestIt->timeUs << " us (" << bestIt->timeMs << " ms)\n";
+            cout << " Maximum Speedup       : " << fixed << setprecision(2) << bestIt->speedup << "x relative to Baseline\n";
+        }
+        cout << "=========================================================================\n\n";
+    }
+
+    static Matrix generateRandomGraph(size_t N, double edgeProbability = 0.7) {
+        Matrix D(N, N, SequentialFloydSolver::INF);
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_real_distribution<double> probDis(0.0, 1.0);
+        uniform_real_distribution<double> weightDis(1.0, 100.0);
+
+        for (size_t i = 0; i < N; ++i) {
+            for (size_t j = 0; j < N; ++j) {
+                if (i == j) {
+                    D(i, j) = 0.0;
+                } else if (probDis(gen) < edgeProbability) {
+                    D(i, j) = weightDis(gen);
+                } else {
+                    D(i, j) = SequentialFloydSolver::INF;
+                }
+            }
+        }
+        return D;
+    }
+
+    template <typename SolverType>
+    static double measureFloydMicroseconds(const SolverType& solver, const Matrix& graph, int iterations = 1) {
+        solver.solve(graph);
+
+        double totalUs = 0.0;
+        for (int i = 0; i < iterations; ++i) {
+            auto start = high_resolution_clock::now();
+            auto res = solver.solve(graph);
+            auto end = high_resolution_clock::now();
+            totalUs += duration<double, micro>(end - start).count();
+        }
+        return totalUs / iterations;
+    }
+
+    static void runFloydBenchmark(size_t graphSize, size_t maxThreads = 240) {
+        if (graphSize == 0) {
+            cout << "[Error] Graph size N must be > 0!\n";
+            return;
+        }
+
+        cout << "\n=========================================================================\n";
+        cout << "            AUTOMATED FLOYD-WARSHALL SHORTEST PATH BENCHMARK             \n";
+        cout << "=========================================================================\n";
+        cout << " Vertices Count (N): " << graphSize << "\n";
+        cout << " Distance Matrix Size: " << graphSize << " x " << graphSize 
+             << " (" << (graphSize * graphSize) << " elements)\n";
+        cout << " Hardware Concurrency (Logical Cores): " << thread::hardware_concurrency() << "\n";
+        cout << " Target Max Threads for Sampling: " << maxThreads << "\n";
+        cout << " Parallelization Strategy: Outer k Barrier + Middle Row Chunking (join)\n";
+        cout << "-------------------------------------------------------------------------\n";
+
+        Matrix graph = generateRandomGraph(graphSize, 0.7);
+
+        int iterations = (graphSize <= 250) ? 2 : 1;
+
+        SequentialFloydSolver seqSolver;
+        double baselineUs = measureFloydMicroseconds(seqSolver, graph, iterations);
+        double baselineMs = baselineUs / 1000.0;
+
+        cout << " BASELINE (Sequential Single-Threaded Floyd): " 
+             << fixed << setprecision(2) << baselineUs << " us (" << baselineMs << " ms)\n";
+        cout << "-------------------------------------------------------------------------\n\n";
+
+        vector<size_t> sampleCounts = generateAdaptiveThreadCounts(maxThreads);
+
+        cout << left 
+             << setw(12) << "| Threads" 
+             << setw(16) << "| Actual Threads" 
+             << setw(14) << "| Time (us)" 
+             << setw(14) << "| Time (ms)" 
+             << setw(14) << "| Speedup (x)" 
+             << setw(16) << "| Efficiency (%)" << "|\n";
+        cout << "|------------|----------------|--------------|--------------|--------------|----------------|\n";
+
+        vector<BenchmarkResult> results;
+
+        for (size_t reqThreads : sampleCounts) {
+            ParallelFloydSolver parSolver(reqThreads);
+            double parUs = measureFloydMicroseconds(parSolver, graph, iterations);
+            double parMs = parUs / 1000.0;
+
+            size_t actualThreads = min(graphSize, reqThreads);
+            if (actualThreads == 0 && graphSize > 0) actualThreads = 1;
+
+            double speedup = baselineUs / parUs;
+            double efficiency = (speedup / reqThreads) * 100.0;
+
+            results.push_back({ reqThreads, actualThreads, parUs, parMs, speedup, efficiency });
+
+            cout << left 
+                 << "| " << setw(11) << reqThreads 
+                 << "| " << setw(15) << actualThreads 
+                 << "| " << setw(13) << fixed << setprecision(2) << parUs 
+                 << "| " << setw(13) << fixed << setprecision(3) << parMs 
+                 << "| " << setw(13) << fixed << setprecision(2) << speedup 
+                 << "| " << setw(15) << fixed << setprecision(1) << efficiency << "|\n";
+        }
+        cout << "-------------------------------------------------------------------------\n";
+
+        auto bestIt = max_element(results.begin(), results.end(), [](const BenchmarkResult& r1, const BenchmarkResult& r2) {
+            return r1.speedup < r2.speedup;
+        });
+
+        if (bestIt != results.end()) {
+            cout << "\n>>> BEST FLOYD-WARSHALL PERFORMANCE RESULT <<<\n";
             cout << " Optimal Thread Count : " << bestIt->requestedThreads << " threads\n";
             cout << " Minimum Execution Time: " << bestIt->timeUs << " us (" << bestIt->timeMs << " ms)\n";
             cout << " Maximum Speedup       : " << fixed << setprecision(2) << bestIt->speedup << "x relative to Baseline\n";
