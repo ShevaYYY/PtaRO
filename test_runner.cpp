@@ -17,6 +17,8 @@
 #include "ParallelFloydSolver.hpp"
 #include "SequentialDijkstraSolver.hpp"
 #include "ParallelDijkstraSolver.hpp"
+#include "SequentialPrimSolver.hpp"
+#include "ParallelPrimSolver.hpp"
 
 using namespace std;
 
@@ -384,6 +386,93 @@ void testDijkstraCorrectnessAndEquivalence() {
     cout << "PASSED\n";
 }
 
+
+void testPrimCorrectnessAndEquivalence() {
+    cout << "[Test 10] Sequential vs Parallel Prim's MST correctness... ";
+
+    // Known 5-vertex undirected graph (MST weight = 16)
+    // Vertices: 0, 1, 2, 3, 4
+    // Edges:
+    // (0-1): 2, (0-3): 6
+    // (1-2): 3, (1-3): 8, (1-4): 5
+    // (2-4): 7
+    // (3-4): 9
+    // Expected MST edges: (0,1)=2, (1,2)=3, (1,4)=5, (0,3)=6. Total weight = 2+3+5+6 = 16.
+    const double INF = SequentialPrimSolver::INF;
+    Matrix graph(5, 5, INF);
+    for (size_t i = 0; i < 5; ++i) {
+        graph(i, i) = 0.0;
+    }
+    auto addEdge = [&](size_t u, size_t v, double w) {
+        graph(u, v) = w;
+        graph(v, u) = w;
+    };
+    addEdge(0, 1, 2.0);
+    addEdge(0, 3, 6.0);
+    addEdge(1, 2, 3.0);
+    addEdge(1, 3, 8.0);
+    addEdge(1, 4, 5.0);
+    addEdge(2, 4, 7.0);
+    addEdge(3, 4, 9.0);
+
+    SequentialPrimSolver seqSolver;
+    ParallelPrimSolver parSolver(4);
+
+    double mstSeq = seqSolver.solve(graph, 0);
+    double mstPar = parSolver.solve(graph, 0);
+
+    assert(abs(mstSeq - 16.0) < 1e-9);
+    assert(abs(mstPar - 16.0) < 1e-9);
+
+    // Test starting from different root vertex (e.g. vertex 2)
+    double mstSeqFrom2 = seqSolver.solve(graph, 2);
+    double mstParFrom2 = parSolver.solve(graph, 2);
+    assert(abs(mstSeqFrom2 - 16.0) < 1e-9);
+    assert(abs(mstParFrom2 - 16.0) < 1e-9);
+
+    // Disconnected graph test
+    Matrix discGraph(4, 4, INF);
+    for (size_t i = 0; i < 4; ++i) discGraph(i, i) = 0.0;
+    discGraph(0, 1) = 3.0; discGraph(1, 0) = 3.0; // component 1: {0, 1}
+    discGraph(2, 3) = 4.0; discGraph(3, 2) = 4.0; // component 2: {2, 3}
+    double discSeq = seqSolver.solve(discGraph, 0);
+    double discPar = parSolver.solve(discGraph, 0);
+    assert(abs(discSeq - 3.0) < 1e-9);
+    assert(abs(discPar - 3.0) < 1e-9);
+
+    // Equivalence test on a larger random symmetric graph (N = 80) across thread counts
+    size_t N = 80;
+    Matrix randGraph = MatrixBenchmarkSuite::generateRandomSymmetricGraph(N, 0.6);
+
+    double randSeq = seqSolver.solve(randGraph, 0);
+
+    for (size_t threads : {1, 2, 4, 8}) {
+        ParallelPrimSolver testPar(threads);
+        double randPar = testPar.solve(randGraph, 0);
+        assert(abs(randSeq - randPar) < 1e-7);
+    }
+
+    // Exception handling checks
+    bool caughtNonSquare = false;
+    try {
+        Matrix nonSquare(3, 4);
+        seqSolver.solve(nonSquare, 0);
+    } catch (const invalid_argument&) {
+        caughtNonSquare = true;
+    }
+    assert(caughtNonSquare);
+
+    bool caughtOutOfRange = false;
+    try {
+        seqSolver.solve(graph, 10);
+    } catch (const out_of_range&) {
+        caughtOutOfRange = true;
+    }
+    assert(caughtOutOfRange);
+
+    cout << "PASSED\n";
+}
+
 int main() {
     cout << "========================================\n";
     cout << "  RUNNING AUTOMATED UNIT & INTEGRATION TESTS  \n";
@@ -397,6 +486,7 @@ int main() {
     testGaussSolverCorrectnessAndEquivalence();
     testFloydWarshallCorrectnessAndEquivalence();
     testDijkstraCorrectnessAndEquivalence();
+    testPrimCorrectnessAndEquivalence();
     cout << "========================================\n";
     cout << " ALL VERIFICATION TESTS PASSED SUCCESSFULLY! \n";
     cout << "========================================\n";

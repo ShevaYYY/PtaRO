@@ -17,6 +17,8 @@
 #include "ParallelFloydSolver.hpp"
 #include "SequentialDijkstraSolver.hpp"
 #include "ParallelDijkstraSolver.hpp"
+#include "SequentialPrimSolver.hpp"
+#include "ParallelPrimSolver.hpp"
 
 using namespace std;
 using namespace std::chrono;
@@ -36,6 +38,8 @@ void printMenu() {
     cout << " [9] Пошук найкоротшої відстані Флойда між вузлами a та b\n";
     cout << " [10] Ручний запуск алгоритму Дейкстри (послідовний та паралельний)\n";
     cout << " [11] Авто-бенчмарк алгоритму Дейкстри (Smart Step Sampling)\n";
+    cout << " [12] Ручний запуск алгоритму Прима (MST: послідовний та паралельний)\n";
+    cout << " [13] Авто-бенчмарк алгоритму Прима (Smart Step Sampling)\n";
     cout << " [0] Вихід\n";
     cout << "=========================================================\n";
     cout << " Оберіть опцію: ";
@@ -411,6 +415,83 @@ int main() {
                     size_t maxThreads = readMaxThreads(240);
 
                     MatrixBenchmarkSuite::runDijkstraBenchmark(graphSize, startVertex, maxThreads);
+                    break;
+                }
+                case 12: {
+                    cout << "\n=== РУЧНИЙ ЗАПУСК АЛГОРИТМУ ПРИМА (MINIMUM SPANNING TREE) ===\n";
+                    size_t N = 0;
+                    cout << "Введіть кількість вершин графа (N): ";
+                    if (!(cin >> N) || N == 0) {
+                        cout << "[Помилка] Кількість вершин N має бути > 0!\n";
+                        clearInputBuffer();
+                        break;
+                    }
+
+                    size_t startVertex = 0;
+                    cout << "Введіть номер початкової вершини (0 - " << N - 1 << ", за замовчуванням 0): ";
+                    if (!(cin >> startVertex) || startVertex >= N) {
+                        startVertex = 0;
+                        cout << "Встановлено за замовчуванням: 0\n";
+                        clearInputBuffer();
+                    }
+
+                    size_t customThreads = 1;
+                    cout << "Введіть кількість потоків для паралельного розрахунку: ";
+                    if (!(cin >> customThreads) || customThreads == 0) {
+                        customThreads = thread::hardware_concurrency();
+                        cout << "Встановлено за замовчуванням: " << customThreads << " потоків.\n";
+                    }
+
+                    cout << "\nГенерація неорієнтованого графа розміром " << N << " x " << N << " (ймовірність ребра 70%)...\n";
+                    Matrix graph = MatrixBenchmarkSuite::generateRandomSymmetricGraph(N, 0.7);
+
+                    SequentialPrimSolver seqSolver;
+                    auto startSeq = high_resolution_clock::now();
+                    double mstWeightSeq = seqSolver.solve(graph, startVertex);
+                    auto endSeq = high_resolution_clock::now();
+                    double seqUs = duration<double, micro>(endSeq - startSeq).count();
+
+                    ParallelPrimSolver parSolver(customThreads);
+                    auto startPar = high_resolution_clock::now();
+                    double mstWeightPar = parSolver.solve(graph, startVertex);
+                    auto endPar = high_resolution_clock::now();
+                    double parUs = duration<double, micro>(endPar - startPar).count();
+
+                    cout << "\n-------------------------------------------------------------------------\n";
+                    cout << " Початкова вершина: " << startVertex << "\n";
+                    cout << " Загальна вага MST (Sequential): " << fixed << setprecision(2) << mstWeightSeq << "\n";
+                    cout << " Загальна вага MST (Parallel):   " << fixed << setprecision(2) << mstWeightPar << "\n";
+                    cout << " Послідовний час (Sequential): " << fixed << setprecision(2) 
+                         << seqUs << " us (" << (seqUs / 1000.0) << " ms)\n";
+                    cout << " Паралельний час (Parallel, " << customThreads << " потоків): " << fixed << setprecision(2) 
+                         << parUs << " us (" << (parUs / 1000.0) << " ms)\n";
+                    cout << " Прискорення (Speedup): " << fixed << setprecision(2) 
+                         << (seqUs / parUs) << "x\n";
+                    cout << "=========================================================================\n";
+                    break;
+                }
+                case 13: {
+                    cout << "\n--- Авто-бенчмарк алгоритму Прима (Smart Step Sampling) ---\n";
+                    size_t graphSize = 1000;
+                    cout << "Введіть кількість вершин графа (N): ";
+                    if (!(cin >> graphSize) || graphSize == 0) {
+                        cout << "[Помилка] Кількість вершин N має бути > 0!\n";
+                        clearInputBuffer();
+                        break;
+                    }
+
+                    size_t startVertex = 0;
+                    cout << "Введіть номер початкової вершини (0 - " << graphSize - 1 << ", за замовчуванням 0): ";
+                    if (!(cin >> startVertex) || startVertex >= graphSize) {
+                        startVertex = 0;
+                        cout << "Встановлено за замовчуванням: 0\n";
+                        clearInputBuffer();
+                    }
+
+                    cout << "Введіть максимальну кількість потоків для бенчмарку (наприклад, 32 або 240): ";
+                    size_t maxThreads = readMaxThreads(240);
+
+                    MatrixBenchmarkSuite::runPrimBenchmark(graphSize, startVertex, maxThreads);
                     break;
                 }
                 case 0:

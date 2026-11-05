@@ -13,6 +13,8 @@
 #include "ParallelFloydSolver.hpp"
 #include "SequentialDijkstraSolver.hpp"
 #include "ParallelDijkstraSolver.hpp"
+#include "SequentialPrimSolver.hpp"
+#include "ParallelPrimSolver.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -494,7 +496,7 @@ public:
         double totalUs = 0.0;
         for (int i = 0; i < iterations; ++i) {
             auto start = high_resolution_clock::now();
-            auto res = solver.solve(graph, startVertex);
+            solver.solve(graph, startVertex);
             auto end = high_resolution_clock::now();
             totalUs += duration<double, micro>(end - start).count();
         }
@@ -577,6 +579,128 @@ public:
 
         if (bestIt != results.end()) {
             cout << "\n>>> BEST DIJKSTRA PERFORMANCE RESULT <<<\n";
+            cout << " Optimal Thread Count : " << bestIt->requestedThreads << " threads\n";
+            cout << " Minimum Execution Time: " << bestIt->timeUs << " us (" << bestIt->timeMs << " ms)\n";
+            cout << " Maximum Speedup       : " << fixed << setprecision(2) << bestIt->speedup << "x relative to Baseline\n";
+        }
+        cout << "=========================================================================\n\n";
+    }
+
+    static Matrix generateRandomSymmetricGraph(size_t N, double edgeProbability = 0.7) {
+        Matrix D(N, N, SequentialPrimSolver::INF);
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_real_distribution<double> probDis(0.0, 1.0);
+        uniform_real_distribution<double> weightDis(1.0, 100.0);
+
+        for (size_t i = 0; i < N; ++i) {
+            D(i, i) = 0.0;
+            for (size_t j = i + 1; j < N; ++j) {
+                if (probDis(gen) < edgeProbability) {
+                    double w = weightDis(gen);
+                    D(i, j) = w;
+                    D(j, i) = w;
+                } else {
+                    D(i, j) = SequentialPrimSolver::INF;
+                    D(j, i) = SequentialPrimSolver::INF;
+                }
+            }
+        }
+        return D;
+    }
+
+    template <typename SolverType>
+    static double measurePrimMicroseconds(const SolverType& solver, const Matrix& graph, size_t startVertex = 0, int iterations = 3) {
+        solver.solve(graph, startVertex);
+
+        double totalUs = 0.0;
+        for (int i = 0; i < iterations; ++i) {
+            auto start = high_resolution_clock::now();
+            solver.solve(graph, startVertex);
+            auto end = high_resolution_clock::now();
+            totalUs += duration<double, micro>(end - start).count();
+        }
+        return totalUs / iterations;
+    }
+
+    static void runPrimBenchmark(size_t graphSize, size_t startVertex = 0, size_t maxThreads = 240) {
+        if (graphSize == 0) {
+            cout << "[Error] Graph size N must be > 0!\n";
+            return;
+        }
+        if (startVertex >= graphSize) {
+            cout << "[Error] Start vertex must be < " << graphSize << "!\n";
+            return;
+        }
+
+        cout << "\n=========================================================================\n";
+        cout << "            AUTOMATED PRIM'S MST ALGORITHM BENCHMARK                     \n";
+        cout << "=========================================================================\n";
+        cout << " Vertices Count (N): " << graphSize << "\n";
+        cout << " Start Vertex: " << startVertex << "\n";
+        cout << " Symmetric Adjacency Matrix: " << graphSize << " x " << graphSize 
+             << " (" << (graphSize * graphSize) << " elements)\n";
+        cout << " Hardware Concurrency (Logical Cores): " << thread::hardware_concurrency() << "\n";
+        cout << " Target Max Threads for Sampling: " << maxThreads << "\n";
+        cout << " Parallelization Strategy: Barrier-Synchronized 1D Vertex Chunk Partitioning\n";
+        cout << "-------------------------------------------------------------------------\n";
+
+        Matrix graph = generateRandomSymmetricGraph(graphSize, 0.7);
+
+        int iterations = (graphSize <= 500) ? 5 : 2;
+
+        SequentialPrimSolver seqSolver;
+        double baselineUs = measurePrimMicroseconds(seqSolver, graph, startVertex, iterations);
+        double baselineMs = baselineUs / 1000.0;
+        double baselineMST = seqSolver.solve(graph, startVertex);
+
+        cout << " BASELINE (Sequential Prim's Algorithm): " 
+             << fixed << setprecision(2) << baselineUs << " us (" << baselineMs << " ms)\n";
+        cout << " MST Total Weight: " << fixed << setprecision(2) << baselineMST << "\n";
+        cout << "-------------------------------------------------------------------------\n\n";
+
+        vector<size_t> sampleCounts = generateAdaptiveThreadCounts(maxThreads);
+
+        cout << left 
+             << setw(12) << "| Threads" 
+             << setw(16) << "| Actual Threads" 
+             << setw(14) << "| Time (us)" 
+             << setw(14) << "| Time (ms)" 
+             << setw(14) << "| Speedup (x)" 
+             << setw(16) << "| Efficiency (%)" << "|\n";
+        cout << "|------------|----------------|--------------|--------------|--------------|----------------|\n";
+
+        vector<BenchmarkResult> results;
+
+        for (size_t reqThreads : sampleCounts) {
+            ParallelPrimSolver parSolver(reqThreads);
+            double parUs = measurePrimMicroseconds(parSolver, graph, startVertex, iterations);
+            double parMs = parUs / 1000.0;
+
+            size_t actualThreads = min(graphSize, reqThreads);
+            if (actualThreads == 0 && graphSize > 0) actualThreads = 1;
+
+            double speedup = baselineUs / parUs;
+            double efficiency = (speedup / reqThreads) * 100.0;
+
+            results.push_back({ reqThreads, actualThreads, parUs, parMs, speedup, efficiency });
+
+            cout << left 
+                 << "| " << setw(11) << reqThreads 
+                 << "| " << setw(15) << actualThreads 
+                 << "| " << setw(13) << fixed << setprecision(2) << parUs 
+                 << "| " << setw(13) << fixed << setprecision(3) << parMs 
+                 << "| " << setw(13) << fixed << setprecision(2) << speedup 
+                 << "| " << setw(15) << fixed << setprecision(1) << efficiency << "|\n";
+        }
+        cout << "-------------------------------------------------------------------------\n";
+
+        auto bestIt = max_element(results.begin(), results.end(), [](const BenchmarkResult& r1, const BenchmarkResult& r2) {
+            return r1.speedup < r2.speedup;
+        });
+
+        if (bestIt != results.end()) {
+            cout << "\n>>> BEST PRIM PERFORMANCE RESULT <<<\n";
             cout << " Optimal Thread Count : " << bestIt->requestedThreads << " threads\n";
             cout << " Minimum Execution Time: " << bestIt->timeUs << " us (" << bestIt->timeMs << " ms)\n";
             cout << " Maximum Speedup       : " << fixed << setprecision(2) << bestIt->speedup << "x relative to Baseline\n";

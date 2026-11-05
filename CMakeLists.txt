@@ -27,6 +27,8 @@ add_executable(matrix_app
     ParallelFloydSolver.hpp
     SequentialDijkstraSolver.hpp
     ParallelDijkstraSolver.hpp
+    SequentialPrimSolver.hpp
+    ParallelPrimSolver.hpp
     MatrixBenchmarkSuite.hpp
 )
 
@@ -46,6 +48,8 @@ add_executable(test_runner
     ParallelFloydSolver.hpp
     SequentialDijkstraSolver.hpp
     ParallelDijkstraSolver.hpp
+    SequentialPrimSolver.hpp
+    ParallelPrimSolver.hpp
     MatrixBenchmarkSuite.hpp
 )
 
